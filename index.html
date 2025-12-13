@@ -343,15 +343,24 @@
             try {
                 // --- BSC (TrustWallet / MetaMask) ---
                 if (chain === 'BSC') {
-                    // Androidon ellenőrizzük, hogy van-e provider
+                    // Ha nincs MetaMask (pl. sima mobil Chrome-ban vagyunk)
                     if (!window.ethereum) {
-                        // Ha nincs, akkor mélylinkkel nyitjuk meg a TrustWalletet
-                        if(/Android|iPhone/i.test(navigator.userAgent)) {
-                            window.location.href = "https://link.trustwallet.com/open_url?coin_id=20000714&url=" + window.location.href;
+                        // Ha mobilon van, nyissuk meg az appot automatikusan
+                        if(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                            alert("Átirányítás a MetaMask Appba...");
+                            // Ez a "mágikus link" nyitja meg az appot
+                            window.location.href = "https://metamask.app.link/dapp/" + window.location.href.replace("https://", "");
                             return;
                         }
-                        throw "Kérlek nyisd meg ezt az oldalt a TrustWallet böngészőjében!";
+                        // Ha PC-n van, de nincs bővítmény
+                        window.open("https://metamask.io/download/", "_blank");
+                        throw "A böngésződ nem látja a MetaMaskot! Kérlek telepítsd a bővítményt, vagy használd a MetaMask beépített böngészőjét.";
                     }
+                    
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                    // ... innen megy tovább a régi kód ...
+                    await provider.send("eth_requestAccounts", []);
+                    // ...
                     
                     provider = new ethers.providers.Web3Provider(window.ethereum);
                     await provider.send("eth_requestAccounts", []);
