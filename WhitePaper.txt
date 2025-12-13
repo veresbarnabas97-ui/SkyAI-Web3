@@ -15,7 +15,22 @@ FÁZIS 1: AZ ALAPOK (2025 Q1) - Jelenleg itt tartunk ✅
 [x] Web3 Weboldal és dApp elindítása.
 
 [x] Telegram AI Bot (Béta) élesítése.
+🛠️ 4. A RENDSZER TECHNIKAI MŰKÖDÉSE (Whitepaper részlet)
+Hogyan működik a SkyAI Bot? A rendszerünk nem "jósol", hanem elemez. A Bot közvetlen API kapcsolattal rendelkezik a Binance tőzsdéhez.
 
+Adatgyűjtés: 3 óránként lekéri az elmúlt 200 óra árfolyamadatait.
+
+Algoritmus: Kiszámolja az SMA 50 (rövid távú) és SMA 200 (hosszú távú) mozgóátlagokat.
+
+Döntéshozatal:
+
+Ha az Ár > SMA 50 > SMA 200 -> BULLISH (Vétel)
+
+Ha az Ár < SMA 50 < SMA 200 -> BEARISH (Eladás)
+
+Minden más esetben -> SEMLEGES (Várakozás)
+
+Publikálás: A validált jelzést azonnal továbbítja a Telegram csatornára, belépési árral, Take Profit és Stop Loss szintekkel.
 [ ] Közösségi média csatornák indítása (Twitter, Telegram).
 
 FÁZIS 2: NÖVEKEDÉS (2025 Q2)
