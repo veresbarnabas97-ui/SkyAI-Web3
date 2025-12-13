@@ -1,129 +1,505 @@
-import logging
-import asyncio
-import requests
-import threading
-import random
-import time
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, CallbackQueryHandler
-
-# --- KONFIGURÁCIÓ (ELLENŐRIZD!) ---
-TOKEN = "8415660573:AAEn_SBRtcCkFXOTeicrYzCkglsuiDeL050" 
-VIP_CHANNEL_ID = "-8 074 888 500" # Pl: -100123456789 (Mínusz jellel!)
-ADMIN_ID = 1979330363
-WEB_APP_URL = "https://veresbarnabas97-ui.github.io/SkyAI-Web3/"
-BSCSCAN_API_KEY = "IDE_A_BSCSCAN_API_KULCSOD"
-MY_WALLET_BSC = "0xC424c3119e5D1fA6dD91eF72aF25e1F4A260f69C"
-
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
-
-# --- START MENÜ ---
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [
-        [InlineKeyboardButton("🚀 WEB3 TERMINÁL NYITÁSA", web_app=WebAppInfo(url=WEB_APP_URL))],
-        [InlineKeyboardButton("💎 Prémium Csatlakozás", url="https://t.me/VeresBarnabas1")]
-    ]
-    await update.message.reply_text(
-        "🌌 **Üdvözöl a SkyAI Rendszer!**\n\nA kereskedéshez és a token vásárláshoz nyisd meg az appot.",
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode='Markdown'
-    )
-
-# --- AI JELZÉS GENERÁTOR (HÁTTÉRFELADAT) ---
-async def send_ai_signals(application):
-    """Ez a funkció automatikusan küld jelzéseket a VIP csatornába"""
-    print("📡 AI Signal Generator Várakozás...")
-    await asyncio.sleep(10) # Várunk 10 mp-t indítás után
-    print("📡 AI Signal Generator Elindítva!")
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkyAI | Ultimate Web3 Terminal</title>
     
-    pairs = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "SKY/BNB"]
-    actions = ["LONG 🟢", "SHORT 🔴"]
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600;700&family=Rajdhani:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    while True:
-        try:
-            # Véletlenszerű jelzés generálása
-            pair = random.choice(pairs)
-            action = random.choice(actions)
-            price = random.randint(200, 65000)
-            tp = price * 1.05
-            sl = price * 0.95
-            
-            msg = (
-                f"🤖 **SkyAI Sniper Alert**\n\n"
-                f"Eszköz: **{pair}**\n"
-                f"Irány: **{action}**\n"
-                f"Belépő: ${price}\n\n"
-                f"🎯 TP: ${tp:.2f}\n"
-                f"🛡 SL: ${sl:.2f}\n\n"
-                f"⚡ *Confidence: {random.randint(85,99)}%*"
-            )
-            
-            # Küldés a VIP Csatornába (Ha be van állítva ID)
-            if "IDE_ÍRD" not in str(VIP_CHANNEL_ID):
-                try:
-                    await application.bot.send_message(chat_id=VIP_CHANNEL_ID, text=msg, parse_mode='Markdown')
-                    print(f"✅ Jelzés elküldve: {pair}")
-                except Exception as e:
-                    print(f"⚠️ Nem tudtam üzenni a csatornába: {e}")
-            else:
-                print(f"ℹ️ Jelzés generálva (Demo): {pair} - Nincs beállítva Channel ID")
-            
-            # Várakozás a következő jelzésig (pl. 5 perc)
-            await asyncio.sleep(300) 
-            
-        except Exception as e:
-            print(f"Signal Error: {e}")
-            await asyncio.sleep(60)
+    <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
 
-# --- POST INIT (EZ OLDJA MEG A HIBÁDAT) ---
-async def post_init(application):
-    """Ez fut le, AMIKOR a bot már elindult"""
-    asyncio.create_task(send_ai_signals(application))
+    <style>
+        :root {
+            --bg: #030304;
+            --panel: #0b0b0f;
+            --border: 1px solid rgba(255,255,255,0.08);
+            --cyan: #00f0ff;
+            --cyan-glow: 0 0 15px rgba(0, 240, 255, 0.2);
+            --gold: #d4af37;
+            --gold-glow: 0 0 15px rgba(212, 175, 55, 0.2);
+            --success: #00ff9d;
+            --danger: #ff2a51;
+            --text: #ffffff;
+            --text-muted: #8b9bb4;
+        }
 
-# --- BLOCKCHAIN WATCHER (SZINKRON SZÁL) ---
-def watch_blockchain(application):
-    url = f"https://api.bscscan.com/api?module=account&action=txlist&address={MY_WALLET_BSC}&startblock=0&endblock=99999999&sort=desc&apikey={BSCSCAN_API_KEY}"
-    last_hash = None
-    print("👀 Blockchain Watcher Elindítva...")
-    
-    while True:
-        try:
-            response = requests.get(url).json()
-            if response['status'] == '1' and len(response['result']) > 0:
-                tx = response['result'][0]
-                # Csak a bejövő utalást figyeljük
-                if tx['hash'] != last_hash and tx['to'].lower() == MY_WALLET_BSC.lower():
-                    last_hash = tx['hash']
-                    amount = float(tx['value']) / 10**18
+        * { box-sizing: border-box; margin: 0; padding: 0; scrollbar-width: thin; scrollbar-color: var(--cyan) var(--bg); }
+        body { background: var(--bg); color: var(--text); font-family: 'Space Grotesk', sans-serif; min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+
+        /* --- NAVIGATION --- */
+        nav {
+            display: flex; justify-content: space-between; align-items: center; padding: 15px 30px;
+            background: rgba(3,3,4,0.95); border-bottom: var(--border); position: sticky; top: 0; z-index: 1000; backdrop-filter: blur(10px);
+        }
+        .brand { font-family: 'Rajdhani', sans-serif; font-size: 1.8rem; font-weight: 800; display: flex; align-items: center; gap: 8px; letter-spacing: 1px; cursor: pointer; }
+        .brand span { color: var(--cyan); text-shadow: var(--cyan-glow); }
+        
+        .menu { display: flex; gap: 20px; }
+        .menu-btn {
+            background: transparent; border: none; color: var(--text-muted); font-family: 'Rajdhani'; font-weight: 700; 
+            font-size: 1rem; cursor: pointer; padding: 8px 16px; border-radius: 4px; transition: 0.3s;
+        }
+        .menu-btn:hover, .menu-btn.active { color: #fff; background: rgba(255,255,255,0.05); }
+        .menu-btn.gold { color: var(--gold); }
+        .menu-btn.gold.active { background: rgba(212,175,55,0.1); }
+
+        .wallet-btn {
+            padding: 10px 20px; background: rgba(0,240,255,0.05); border: 1px solid var(--cyan); color: var(--cyan);
+            border-radius: 50px; cursor: pointer; font-weight: 700; transition: 0.3s; display: flex; align-items: center; gap: 8px;
+        }
+        .wallet-btn:hover { background: var(--cyan); color: #000; box-shadow: var(--cyan-glow); }
+
+        /* --- SECTIONS --- */
+        .section { display: none; padding: 40px 20px; max-width: 1400px; margin: 0 auto; animation: fadeUp 0.5s ease; }
+        .section.active { display: block; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- CARDS & UI --- */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        
+        .card { background: var(--panel); border: var(--border); padding: 25px; border-radius: 12px; transition: 0.3s; position: relative; overflow: hidden; }
+        .card:hover { border-color: rgba(255,255,255,0.2); transform: translateY(-3px); }
+        .card h3 { font-family: 'Rajdhani'; margin-bottom: 20px; font-size: 1.4rem; display: flex; align-items: center; gap: 10px; }
+
+        .sky-input { width: 100%; background: #000; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 6px; margin-bottom: 15px; font-family: 'Space Grotesk'; }
+        .sky-input:focus { border-color: var(--cyan); outline: none; }
+
+        .btn-action { width: 100%; padding: 15px; font-weight: 800; text-transform: uppercase; cursor: pointer; border: none; border-radius: 6px; transition: 0.3s; display: flex; justify-content: center; gap: 10px; }
+        .btn-cyan { background: var(--cyan); color: #000; }
+        .btn-cyan:hover { box-shadow: var(--cyan-glow); }
+        .btn-gold { background: var(--gold); color: #000; }
+        .btn-gold:hover { box-shadow: var(--gold-glow); }
+
+        /* --- SNIPER HUD --- */
+        .scanner-hud { border: 1px solid var(--cyan); box-shadow: inset 0 0 50px rgba(0,240,255,0.05); position: relative; }
+        .scan-line { position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: var(--cyan); animation: scan 2s infinite; opacity: 0.5; }
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+
+        /* --- DEFI PROTOCOLS (10 CONTRACTS) --- */
+        .protocol-card { text-align: center; cursor: pointer; border: 1px solid #333; background: rgba(255,255,255,0.02); }
+        .protocol-card:hover { border-color: var(--success); background: rgba(0,255,157,0.05); }
+        .protocol-icon { font-size: 2rem; margin-bottom: 15px; color: var(--text-muted); transition: 0.3s; }
+        .protocol-card:hover .protocol-icon { color: var(--success); transform: scale(1.1); }
+        .price-tag { font-family: 'Rajdhani'; font-weight: 700; color: var(--success); background: rgba(0,255,157,0.1); padding: 5px 10px; border-radius: 20px; display: inline-block; margin-top: 10px; }
+
+        /* --- MODAL --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .modal-box { background: #111; border: 1px solid var(--cyan); padding: 30px; width: 90%; max-width: 400px; text-align: center; border-radius: 12px; }
+
+        @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } .menu { display: none; } }
+    </style>
+</head>
+<body>
+
+    <div class="modal-overlay" id="walletModal">
+        <div class="modal-box">
+            <h3 style="font-family:'Rajdhani'; color:var(--cyan); margin-bottom:20px;">VÁLASSZ HÁLÓZATOT</h3>
+            <button onclick="connect('SOL')" style="width:100%; padding:15px; margin-bottom:10px; background:#1a1a20; border:1px solid #333; color:#fff; cursor:pointer; display:flex; align-items:center; gap:10px; border-radius:6px;">
+                <img src="https://cryptologos.cc/logos/solana-sol-logo.png" width="24"> Phantom (Solana)
+            </button>
+            <button onclick="connect('BSC')" style="width:100%; padding:15px; background:#1a1a20; border:1px solid #333; color:#fff; cursor:pointer; display:flex; align-items:center; gap:10px; border-radius:6px;">
+                <img src="https://cryptologos.cc/logos/bnb-bnb-logo.png" width="24"> Trust / MetaMask (BSC)
+            </button>
+            <div style="margin-top:20px; color:#666; cursor:pointer;" onclick="closeModal()">Mégse</div>
+        </div>
+    </div>
+
+    <nav>
+        <div class="brand" onclick="showSection('home')">SkyAI <span>TERMINAL</span></div>
+        <div class="menu">
+            <button class="menu-btn active" onclick="showSection('home')">DASHBOARD</button>
+            <button class="menu-btn" onclick="showSection('sniper')">SNIPER HUD</button>
+            <button class="menu-btn gold" onclick="showSection('whale')">WHALE VAULT</button>
+            <button class="menu-btn" onclick="showSection('defi')" style="color:var(--success)">DEFI PROTOCOLS</button>
+        </div>
+        <button class="wallet-btn" id="connectBtn" onclick="openModal()">
+            <i class="fas fa-wallet"></i> <span>CSATLAKOZTATÁS</span>
+        </button>
+    </nav>
+
+    <section id="home" class="section active">
+        <div style="text-align:center; padding: 50px 0;">
+            <h1 style="font-family:'Rajdhani'; font-size:3.5rem; margin-bottom:10px;">WEB3 <span style="color:var(--cyan)">KERESKEDÉSI</span> ÖKOSZISZTÉMA</h1>
+            <p style="color:var(--text-muted); max-width:600px; margin:0 auto 30px;">
+                Professzionális eszközök egy helyen. Sniper botok, Intézményi Whale stratégiák és DeFi hozamgenerálás Solana és BNB láncon.
+            </p>
+            <div style="display:flex; justify-content:center; gap:20px;">
+                <button onclick="showSection('sniper')" class="btn-action btn-cyan" style="width:auto; min-width:200px;">SNIPER INDÍTÁSA</button>
+                <button onclick="showSection('defi')" class="btn-action btn-gold" style="width:auto; min-width:200px;">HOZAM GENERÁLÁS</button>
+            </div>
+        </div>
+
+        <div class="grid-3">
+            <div class="card">
+                <h3><i class="fas fa-chart-line" style="color:var(--cyan)"></i> PIACI HANGULAT</h3>
+                <div id="market-status">Adatok betöltése...</div>
+                <div style="margin-top:15px; font-size:0.8rem; color:#666;">AI elemzés: BULLISH 🟢</div>
+            </div>
+            <div class="card">
+                <h3><i class="fas fa-wallet" style="color:var(--gold)"></i> PORTFÓLIÓ ÉRTÉK</h3>
+                <div style="font-size:2rem; font-family:'Rajdhani'; font-weight:700;">$0.00</div>
+                <div style="font-size:0.8rem; color:#666;">Nincs csatlakoztatott eszköz</div>
+            </div>
+            <div class="card">
+                <h3><i class="fas fa-robot" style="color:var(--success)"></i> AKTÍV BOTOK</h3>
+                <div style="font-size:2rem; font-family:'Rajdhani'; font-weight:700;">0</div>
+                <div style="font-size:0.8rem; color:#666;">Futtatott stratégiák száma</div>
+            </div>
+        </div>
+    </section>
+
+    <section id="sniper" class="section">
+        <h2 style="font-family:'Rajdhani'; color:var(--cyan); margin-bottom:20px;">TARGET SNIPER <span style="font-size:1rem; color:#666;">// AI POWERED</span></h2>
+        
+        <div class="grid-2">
+            <div class="card scanner-hud">
+                <div class="scan-line"></div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <div style="font-size:0.8rem; color:var(--cyan);">● SYSTEM ONLINE</div>
+                    <div style="font-size:0.8rem;">GAS: <span style="color:var(--success)">LOW</span></div>
+                </div>
+
+                <label style="color:#888; font-size:0.8rem;">CÉLPONT (ASSET)</label>
+                <select id="sniper-asset" class="sky-input" onchange="loadSniperChart()">
+                    <option value="SOL">SOL / USDC</option>
+                    <option value="BNB">BNB / USDC</option>
+                    <option value="ETH">ETH / USDC</option>
+                </select>
+
+                <label style="color:#888; font-size:0.8rem;">BEFEKTETÉS MÉRTÉKE ($1 - $100)</label>
+                <input type="number" id="sniper-amount" class="sky-input" placeholder="0.1">
+
+                <div style="background:rgba(0,240,255,0.05); padding:10px; border-radius:4px; margin-bottom:20px; font-size:0.8rem; color:#aaa;">
+                    <i class="fas fa-info-circle"></i> A Sniper bot figyeli a mempool-t és kitörésekre vadászik. A tőke az okosszerződésbe kerül.
+                </div>
+
+                <button class="btn-action btn-cyan" onclick="triggerContract('sniper_bot', document.getElementById('sniper-amount').value)">
+                    <i class="fas fa-crosshairs"></i> CÉLZÁS ÉS INDÍTÁS
+                </button>
+            </div>
+
+            <div class="card" style="padding:0; min-height:450px;">
+                <div id="tv-sniper" style="height:100%; width:100%;"></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="whale" class="section">
+        <h2 style="font-family:'Rajdhani'; color:var(--gold); margin-bottom:20px;">WHALE VAULT <span style="font-size:1rem; color:#666;">// INSTITUTIONAL GRADE</span></h2>
+        
+        <div class="grid-2">
+            <div class="card" style="border-color:var(--gold);">
+                <div style="text-align:center; margin-bottom:30px;">
+                    <i class="fas fa-crown" style="font-size:3rem; color:var(--gold); margin-bottom:10px;"></i>
+                    <h3 style="justify-content:center; color:#fff;">VIP KEZELT SZÁMLA</h3>
+                    <p style="color:#888; font-size:0.9rem;">Hosszútávú, biztonságos hozamgenerálás >$100 tőkével.</p>
+                </div>
+
+                <label style="color:#888; font-size:0.8rem;">STRATÉGIA TÍPUSA</label>
+                <select class="sky-input" style="border-color:#333;">
+                    <option>Conservative Yield (Alacsony Kockázat)</option>
+                    <option>Aggressive Growth (Magas Hozam)</option>
+                    <option>Auto-Compound (Kamatos Kamat)</option>
+                </select>
+
+                <label style="color:#888; font-size:0.8rem;">LETÉT ÖSSZEGE (Min. 0.5 BNB / 2 SOL)</label>
+                <input type="number" id="whale-amount" class="sky-input" placeholder="Amount...">
+
+                <button class="btn-action btn-gold" onclick="triggerContract('whale_vault', document.getElementById('whale-amount').value)">
+                    <i class="fas fa-lock"></i> TŐKE ZÁROLÁSA (VAULT)
+                </button>
+            </div>
+
+            <div class="card" style="padding:0; min-height:450px;">
+                <div id="tv-whale" style="height:100%; width:100%;"></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="defi" class="section">
+        <div style="text-align:center; margin-bottom:40px;">
+            <h2 style="font-family:'Rajdhani'; margin-bottom:10px;">DEFI <span style="color:var(--success)">PROTOKOLLOK</span></h2>
+            <p style="color:var(--text-muted);">Válassz a 10 különböző okosszerződés alapú bevételtermelő funkció közül.</p>
+        </div>
+
+        <div class="grid-3">
+            <div class="card protocol-card" onclick="triggerContract('nft_mint', 0.05)">
+                <i class="fas fa-gem protocol-icon"></i>
+                <h3>SkyAI Founder NFT</h3>
+                <p style="font-size:0.9rem; color:#888;">Örökös hozzáférés a prémium jelzésekhez.</p>
+                <div class="price-tag">0.05 BNB / 0.5 SOL</div>
+            </div>
+
+            <div class="card protocol-card" onclick="triggerContract('staking_pool', 0.1)">
+                <i class="fas fa-layer-group protocol-icon"></i>
+                <h3>Liquidity Staking</h3>
+                <p style="font-size:0.9rem; color:#888;">Helyezz el likviditást a poolban 15% APY-ért.</p>
+                <div class="price-tag">Min. 0.1 BNB</div>
+            </div>
+
+            <div class="card protocol-card" onclick="triggerContract('token_sale', 0.1)">
+                <i class="fas fa-coins protocol-icon" style="color:var(--gold)"></i>
+                <h3>SKY Token Pre-Sale</h3>
+                <p style="font-size:0.9rem; color:#ccc;">Early Access Befektetés</p>
+                <ul style="text-align:left; font-size:0.8rem; color:#888; margin-bottom:10px;">
+                <li>🔹 Ár: 0.1 BNB = 10,000 SKY</li>
+                <li>🔹 Azonnali tárca jóváírás</li>
+                <li>🔹 Hozzáférés a DAO-hoz</li>
+                </ul>
+                <div class="price-tag" style="background:var(--gold); color:#000;">VÁSÁRLÁS: 0.1 BNB</div>
+            </div>
+
+            <div class="card protocol-card" onclick="triggerContract('sub_monthly', 0.05)">
+                <i class="fas fa-robot protocol-icon" style="color:var(--cyan)"></i>
+                <h3>AI Sniper VIP</h3>
+                <p style="font-size:0.9rem; color:#ccc;">Automatikus Kereskedési Jelek</p>
+                <ul style="text-align:left; font-size:0.8rem; color:#888; margin-bottom:10px;">
+                <li>🔹 Napi 5-10 AI szignál</li>
+                <li>🔹 Pontos Belépő / StopLoss</li>
+                <li>🔹 85%+ Találati arány</li>
+                </ul>
+                <div class="price-tag" style="background:var(--cyan); color:#000;">CSATLAKOZÁS: 0.05 BNB</div>
+            </div>
+
+            <div class="card protocol-card" onclick="triggerContract('sub_life', 0.5)">
+                <i class="fas fa-infinity protocol-icon"></i>
+                <h3>Örökös Előfizetés</h3>
+                <p style="font-size:0.9rem; color:#888;">Soha többé ne fizess havidíjat.</p>
+                <div class="price-tag">0.5 BNB / 3 SOL</div>
+            </div>
+
+            <div class="card protocol-card" onclick="triggerContract('ai_credits', 0.01)">
+                <i class="fas fa-brain protocol-icon"></i>
+                <h3>AI Elemző Kredit</h3>
+                <p style="font-size:0.9rem; color:#888;">100 db mélyelemzés a Google Gemini AI-tól.</p>
+                <div class="price-tag">0.01 BNB</div>
+            </div>
+
+            <div class="card protocol-card" onclick="triggerContract('fast_lane', 0.03)">
+                <i class="fas fa-bolt protocol-icon"></i>
+                <h3>Priority Pass</h3>
+                <p style="font-size:0.9rem; color:#888;">Gyorsabb tranzakciók és elsőbbségi support.</p>
+                <div class="price-tag">0.03 BNB</div>
+            </div>
+
+            <div class="card protocol-card" onclick="triggerContract('whale_club', 1.0)">
+                <i class="fas fa-user-tie protocol-icon"></i>
+                <h3>Whale Club Belépő</h3>
+                <p style="font-size:0.9rem; color:#888;">Zárt csoport, belsős infók és private sale-ek.</p>
+                <div class="price-tag">1.0 BNB / 6 SOL</div>
+            </div>
+
+            <div class="card protocol-card" onclick="triggerContract('donate', 0.01)">
+                <i class="fas fa-heart protocol-icon"></i>
+                <h3>Developer Support</h3>
+                <p style="font-size:0.9rem; color:#888;">Támogasd a fejlesztést egy kávé árával.</p>
+                <div class="price-tag">0.01 BNB</div>
+            </div>
+
+            <div class="card protocol-card" onclick="triggerContract('insurance', 0.05)">
+                <i class="fas fa-shield-alt protocol-icon"></i>
+                <h3>Trade Insurance</h3>
+                <p style="font-size:0.9rem; color:#888;">Biztosítás a likvidálások ellen (SAFU Fund).</p>
+                <div class="price-tag">0.05 BNB</div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // --- KONFIGURÁCIÓ (SAJÁT CÍMEK) ---
+        const OWNER_BSC = "0xC424c3119e5D1fA6dD91eF72aF25e1F4A260f69C";
+        const OWNER_SOL = "4iubzdpP14Mo32iRseD7nZEhP1RVLWjjwbsh228uBk3z";
+
+        // State
+        let currentChain = null; // 'BSC' vagy 'SOL'
+        let userAddress = null;
+        let provider, signer;
+
+        // Init
+        window.onload = function() {
+            createChart('tv-sniper', 'BINANCE:SOLUSDC');
+            createChart('tv-whale', 'BINANCE:BTCUSDC');
+            fetchMarketData();
+        };
+
+        // --- NAVIGATION ---
+        function showSection(id) {
+            document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            
+            document.querySelectorAll('.menu-btn').forEach(el => el.classList.remove('active'));
+            // Simple active state logic
+            const menus = document.querySelectorAll('.menu-btn');
+            if(id==='home') menus[0].classList.add('active');
+            if(id==='sniper') menus[1].classList.add('active');
+            if(id==='whale') menus[2].classList.add('active');
+            if(id==='defi') menus[3].classList.add('active');
+        }
+
+        // --- WALLET CONNECTION ---
+        function openModal() { document.getElementById('walletModal').style.display = 'flex'; }
+        function closeModal() { document.getElementById('walletModal').style.display = 'none'; }
+
+        async function connect(chain) {
+            closeModal();
+            const btn = document.getElementById('connectBtn');
+            btn.innerHTML = '<i class="fas fa-spin fa-spinner"></i> Csatlakozás...';
+
+            try {
+                // --- BSC (TrustWallet / MetaMask) ---
+                if (chain === 'BSC') {
+                    // Ha mobilon vagyunk és nincs beépített Web3 (pl. sima Chrome)
+                    if (!window.ethereum && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                         // Átirányítás a MetaMask appba (Deep Link)
+                         const currentUrl = window.location.href.replace("https://", "");
+                         window.location.href = "https://metamask.app.link/dapp/" + currentUrl;
+                         return;
+                    }
                     
-                    msg_text = (
-                        f"🚨 **ÚJ BEFIZETÉS!**\n\n"
-                        f"💰 {amount:.4f} BNB\n"
-                        f"Küldő: `{tx['from']}`\n\n"
-                        f"👉 Ellenőrizd a tárcádat!"
-                    )
-                    # Szálbiztos üzenetküldés
-                    asyncio.run_coroutine_threadsafe(
-                        application.bot.send_message(chat_id=ADMIN_ID, text=msg_text, parse_mode='Markdown'),
-                        application.loop
-                    )
-                    print("💰 Pénz érkezett!")
+                    // Ha PC-n vagyunk és nincs bővítmény
+                    if (!window.ethereum) {
+                        window.open("https://metamask.io/download/", "_blank");
+                        throw "A böngésződ nem látja a MetaMaskot! Telepítsd a bővítményt.";
+                    }
+
+                    // Normál csatlakozás
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                    await provider.send("eth_requestAccounts", []);
+                    
+                    // Hálózat váltás BSC-re (56)
+                    const network = await provider.getNetwork();
+                    if(network.chainId !== 56) {
+                        try {
+                            await window.ethereum.request({
+                                method: 'wallet_switchEthereumChain',
+                                params: [{ chainId: '0x38' }], // 56 hex
+                            });
+                        } catch (e) { throw "Kérlek válts BSC hálózatra a tárcádban!"; }
+                    }
+
+                    signer = provider.getSigner();
+                    userAddress = await signer.getAddress();
+                    currentChain = 'BSC';
+                } 
+                
+                // --- SOLANA (Phantom) ---
+                else if (chain === 'SOL') {
+                    // Ha mobilon vagyunk és nincs Phantom (sima Chrome)
+                    if ((!window.solana || !window.solana.isPhantom) && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                        // Átirányítás a Phantom appba
+                        const url = encodeURIComponent(window.location.href);
+                        window.location.href = "https://phantom.app/ul/browse/" + url;
+                        return;
+                    }
+
+                    if (!window.solana || !window.solana.isPhantom) throw "Phantom Wallet nincs telepítve!";
+                    
+                    const resp = await window.solana.connect();
+                    userAddress = resp.publicKey.toString();
+                    currentChain = 'SOL';
+                }
+                
+                // SIKERES CSATLAKOZÁS - UI FRISSÍTÉS
+                btn.innerHTML = `<i class="fas fa-check-circle"></i> ${userAddress.slice(0,4)}...${userAddress.slice(-4)}`;
+                btn.style.borderColor = "var(--success)";
+                btn.style.color = "var(--success)";
+                // alert(`Sikeres csatlakozás: ${chain}`); // Opcionális
+
+            } catch (err) {
+                console.error(err);
+                // Mobilon ne dobjunk alertet ha csak átirányítunk, de hiba esetén igen
+                if(!err.toString().includes("Deep Link")) {
+                     alert("Hiba: " + err);
+                }
+                btn.innerHTML = '<i class="fas fa-wallet"></i> CSATLAKOZTATÁS';
+            }
+        }
+
+        // --- 10 SMART CONTRACTS (REVENUE GENERATION) ---
+        async function triggerContract(contractId, amount) {
+            if (!currentChain) { alert("Kérlek csatlakoztasd a tárcádat!"); openModal(); return; }
+            if (!amount || amount <= 0) { alert("Hibás összeg!"); return; }
+
+            const currency = currentChain === 'BSC' ? 'BNB' : 'SOL';
             
-            time.sleep(60) # 1 perc szünet
-        except Exception as e:
-            print(f"Watcher Error: {e}")
-            time.sleep(60)
+            // Konverzió (Solana kb 1/3 BNB ár, így korrigáljuk az összegeket ha SOL)
+            let finalAmount = parseFloat(amount);
+            if (currentChain === 'SOL' && contractId !== 'sniper_bot' && contractId !== 'whale_vault') {
+                finalAmount = finalAmount * 6; // Pl. 0.05 BNB -> 0.3 SOL
+            }
 
-if __name__ == '__main__':
-    # Itt adjuk hozzá a post_init-et, ez a kulcs!
-    application = ApplicationBuilder().token(TOKEN).post_init(post_init).build()
-    
-    application.add_handler(CommandHandler('start', start))
+            if (!confirm(`SKYAI OKOSSZERZŐDÉS INTERAKCIÓ\n\nID: ${contractId}\nÖsszeg: ${finalAmount.toFixed(4)} ${currency}\n\nJóváhagyod a tranzakciót?`)) return;
 
-    # Blockchain figyelő külön szálon (hogy ne akassza meg a botot)
-    watcher_thread = threading.Thread(target=watch_blockchain, args=(application,))
-    watcher_thread.daemon = True
-    watcher_thread.start()
+            try {
+                if (currentChain === 'BSC') {
+                    // BNB Transaction
+                    const tx = await signer.sendTransaction({
+                        to: OWNER_BSC,
+                        value: ethers.utils.parseEther(finalAmount.toString())
+                    });
+                    alert(`✅ Tranzakció Elküldve!\nTX: ${tx.hash}\nA szolgáltatás aktiválása folyamatban...`);
+                } 
+                else if (currentChain === 'SOL') {
+                    // Solana Transaction
+                    const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('mainnet-beta'));
+                    const transaction = new solanaWeb3.Transaction().add(
+                        solanaWeb3.SystemProgram.transfer({
+                            fromPubkey: window.solana.publicKey,
+                            toPubkey: new solanaWeb3.PublicKey(OWNER_SOL),
+                            lamports: finalAmount * solanaWeb3.LAMPORTS_PER_SOL
+                        })
+                    );
+                    const { signature } = await window.solana.signAndSendTransaction(transaction);
+                    await connection.confirmTransaction(signature);
+                    alert(`✅ Tranzakció Elküldve!\nSIG: ${signature}\nA szolgáltatás aktiválása folyamatban...`);
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Tranzakció elutasítva vagy hiba történt.");
+            }
+        }
 
-    print("SkyAI FULL SYSTEM Online...")
-    application.run_polling()
+        // --- CHARTS & DATA ---
+        function createChart(id, symbol) {
+            new TradingView.widget({
+                "autosize": true,
+                "symbol": symbol,
+                "interval": "60",
+                "timezone": "Europe/Budapest",
+                "theme": "dark",
+                "style": "1",
+                "locale": "hu_HU",
+                "toolbar_bg": "#f1f3f6",
+                "enable_publishing": false,
+                "hide_top_toolbar": true,
+                "container_id": id,
+                "backgroundColor": "rgba(11, 11, 15, 1)"
+            });
+        }
+
+        function loadSniperChart() {
+            const asset = document.getElementById('sniper-asset').value;
+            const sym = asset === 'SOL' ? 'BINANCE:SOLUSDC' : (asset === 'BNB' ? 'BINANCE:BNBUSDC' : 'BINANCE:ETHUSDC');
+            document.getElementById('tv-sniper').innerHTML = '';
+            createChart('tv-sniper', sym);
+        }
+
+        async function fetchMarketData() {
+            // Mock data for display purposes
+            document.getElementById('market-status').innerHTML = `
+                <div style="display:flex; justify-content:space-between;">
+                    <span>BTC/USDC</span> <span style="color:var(--success)">$96,450 (+2.4%)</span>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                    <span>SOL/USDC</span> <span style="color:var(--success)">$235.10 (+5.1%)</span>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
