@@ -3,12 +3,13 @@ import asyncio
 import requests
 import threading
 import random
+import time
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, CallbackQueryHandler
 
-# --- KONFIGURÁCIÓ (TÖLTSD KI!) ---
+# --- KONFIGURÁCIÓ (ELLENŐRIZD!) ---
 TOKEN = "8415660573:AAEn_SBRtcCkFXOTeicrYzCkglsuiDeL050" 
-VIP_CHANNEL_ID = "IDE_ÍRD_A_CSATORNA_ID_T" # Pl: -100123456789
+VIP_CHANNEL_ID = "IDE_ÍRD_A_CSATORNA_ID_T" # Pl: -100123456789 (Mínusz jellel!)
 ADMIN_ID = 1979330363
 WEB_APP_URL = "https://veresbarnabas97-ui.github.io/SkyAI-Web3/"
 BSCSCAN_API_KEY = "IDE_A_BSCSCAN_API_KULCSOD"
@@ -20,7 +21,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("🚀 WEB3 TERMINÁL NYITÁSA", web_app=WebAppInfo(url=WEB_APP_URL))],
-        [InlineKeyboardButton("💎 Prémium Csatlakozás", url="https://t.me/VeresBarnabas1")] # Ide írhatsz neki, ha fizetett
+        [InlineKeyboardButton("💎 Prémium Csatlakozás", url="https://t.me/VeresBarnabas1")]
     ]
     await update.message.reply_text(
         "🌌 **Üdvözöl a SkyAI Rendszer!**\n\nA kereskedéshez és a token vásárláshoz nyisd meg az appot.",
@@ -28,17 +29,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode='Markdown'
     )
 
-# --- AI JELZÉS GENERÁTOR (A "TERMÉK") ---
+# --- AI JELZÉS GENERÁTOR (HÁTTÉRFELADAT) ---
 async def send_ai_signals(application):
     """Ez a funkció automatikusan küld jelzéseket a VIP csatornába"""
-    print("📡 AI Signal Generator Elindítva...")
+    print("📡 AI Signal Generator Várakozás...")
+    await asyncio.sleep(10) # Várunk 10 mp-t indítás után
+    print("📡 AI Signal Generator Elindítva!")
     
     pairs = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "SKY/BNB"]
     actions = ["LONG 🟢", "SHORT 🔴"]
     
     while True:
         try:
-            # Véletlenszerű jelzés generálása (Demo célra)
+            # Véletlenszerű jelzés generálása
             pair = random.choice(pairs)
             action = random.choice(actions)
             price = random.randint(200, 65000)
@@ -55,19 +58,29 @@ async def send_ai_signals(application):
                 f"⚡ *Confidence: {random.randint(85,99)}%*"
             )
             
-            # Küldés a VIP Csatornába
-            if VIP_CHANNEL_ID != "IDE_ÍRD_A_CSATORNA_ID_T":
-                await application.bot.send_message(chat_id=VIP_CHANNEL_ID, text=msg, parse_mode='Markdown')
-                print(f"Jelzés elküldve: {pair}")
+            # Küldés a VIP Csatornába (Ha be van állítva ID)
+            if "IDE_ÍRD" not in str(VIP_CHANNEL_ID):
+                try:
+                    await application.bot.send_message(chat_id=VIP_CHANNEL_ID, text=msg, parse_mode='Markdown')
+                    print(f"✅ Jelzés elküldve: {pair}")
+                except Exception as e:
+                    print(f"⚠️ Nem tudtam üzenni a csatornába: {e}")
+            else:
+                print(f"ℹ️ Jelzés generálva (Demo): {pair} - Nincs beállítva Channel ID")
             
-            # Várakozás (pl. 2-5 óránként, de teszthez legyen 60 másodperc)
-            await asyncio.sleep(600) # 10 perc
+            # Várakozás a következő jelzésig (pl. 5 perc)
+            await asyncio.sleep(300) 
             
         except Exception as e:
             print(f"Signal Error: {e}")
             await asyncio.sleep(60)
 
-# --- BLOCKCHAIN WATCHER (PÉNZ FIGYELŐ) ---
+# --- POST INIT (EZ OLDJA MEG A HIBÁDAT) ---
+async def post_init(application):
+    """Ez fut le, AMIKOR a bot már elindult"""
+    asyncio.create_task(send_ai_signals(application))
+
+# --- BLOCKCHAIN WATCHER (SZINKRON SZÁL) ---
 def watch_blockchain(application):
     url = f"https://api.bscscan.com/api?module=account&action=txlist&address={MY_WALLET_BSC}&startblock=0&endblock=99999999&sort=desc&apikey={BSCSCAN_API_KEY}"
     last_hash = None
@@ -78,41 +91,39 @@ def watch_blockchain(application):
             response = requests.get(url).json()
             if response['status'] == '1' and len(response['result']) > 0:
                 tx = response['result'][0]
+                # Csak a bejövő utalást figyeljük
                 if tx['hash'] != last_hash and tx['to'].lower() == MY_WALLET_BSC.lower():
                     last_hash = tx['hash']
                     amount = float(tx['value']) / 10**18
                     
-                    # ÉRTESÍTÉS NEKED
                     msg_text = (
                         f"🚨 **ÚJ BEFIZETÉS!**\n\n"
                         f"💰 {amount:.4f} BNB\n"
                         f"Küldő: `{tx['from']}`\n\n"
-                        f"👉 Küldj neki meghívót a VIP csatornába!"
+                        f"👉 Ellenőrizd a tárcádat!"
                     )
+                    # Szálbiztos üzenetküldés
                     asyncio.run_coroutine_threadsafe(
                         application.bot.send_message(chat_id=ADMIN_ID, text=msg_text, parse_mode='Markdown'),
                         application.loop
                     )
-            # time.sleep helyett itt egyszerű várakozás kell a threadben
-            import time
-            time.sleep(60)
+                    print("💰 Pénz érkezett!")
+            
+            time.sleep(60) # 1 perc szünet
         except Exception as e:
             print(f"Watcher Error: {e}")
-            import time
             time.sleep(60)
 
 if __name__ == '__main__':
-    application = ApplicationBuilder().token(TOKEN).build()
+    # Itt adjuk hozzá a post_init-et, ez a kulcs!
+    application = ApplicationBuilder().token(TOKEN).post_init(post_init).build()
+    
     application.add_handler(CommandHandler('start', start))
 
-    # 1. Szál: Blockchain figyelő (Szinkron)
+    # Blockchain figyelő külön szálon (hogy ne akassza meg a botot)
     watcher_thread = threading.Thread(target=watch_blockchain, args=(application,))
     watcher_thread.daemon = True
     watcher_thread.start()
-
-    # 2. Feladat: AI Jelzések (Aszinkron) - Ezt a loop-hoz adjuk
-    loop = asyncio.get_event_loop()
-    loop.create_task(send_ai_signals(application))
 
     print("SkyAI FULL SYSTEM Online...")
     application.run_polling()
