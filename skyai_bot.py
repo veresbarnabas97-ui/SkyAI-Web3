@@ -9,7 +9,7 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, Callb
 
 # --- KONFIGURÁCIÓ (ELLENŐRIZD!) ---
 TOKEN = "8415660573:AAEn_SBRtcCkFXOTeicrYzCkglsuiDeL050" 
-VIP_CHANNEL_ID = "IDE_ÍRD_A_CSATORNA_ID_T" # Pl: -100123456789 (Mínusz jellel!)
+VIP_CHANNEL_ID = "-8 074 888 500" # Pl: -100123456789 (Mínusz jellel!)
 ADMIN_ID = 1979330363
 WEB_APP_URL = "https://veresbarnabas97-ui.github.io/SkyAI-Web3/"
 BSCSCAN_API_KEY = "IDE_A_BSCSCAN_API_KULCSOD"
