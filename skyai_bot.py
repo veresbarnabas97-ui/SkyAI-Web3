@@ -8,7 +8,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppI
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, CallbackQueryHandler
 
 # --- KONFIGURÁCIÓ (ELLENŐRIZD!) ---
-TOKEN = "8415660573:AAEn_SBRtcCkFXOTeicrYzCkglsuiDeL050" 
+TOKEN = "8074888500:AAEQvVzcKVcZLOW-LbNm-rUR9qDg-DShZeI" 
 VIP_CHANNEL_ID = "-1001979330363" # Pl: -100123456789 (Mínusz jellel!)
 ADMIN_ID = 1979330363
 WEB_APP_URL = "https://veresbarnabas97-ui.github.io/SkyAI-Web3/"
