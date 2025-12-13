@@ -1,0 +1,37 @@
+📄 1. RÖVID ÖSSZEFOGLALÓ (Pitch Deck)
+Projekt Neve: SkyAI Ecosystem ($SKY) Jelmondat: "Mesterséges Intelligencia a Blokkláncon."
+
+Mi ez? A SkyAI egy új generációs Web3 ökoszisztéma a Binance Smart Chain (BSC) hálózaton. A projekt célja, hogy az intézményi szintű kereskedési eszközöket (AI Elemzés, Sniper Botok) elérhetővé tegye a kisbefektetők számára. A rendszer magja a $SKY token, amely hozzáférést biztosít a prémium szolgáltatásokhoz.
+
+🗺️ 2. ROADMAP (A Térkép)
+Ezt tedd ki a weboldalra, hogy lássák a jövőképet.
+
+FÁZIS 1: AZ ALAPOK (2025 Q1) - Jelenleg itt tartunk ✅
+
+[x] Smart Contract fejlesztése és auditálása.
+
+[x] $SKY Token létrehozása (100M Supply).
+
+[x] Web3 Weboldal és dApp elindítása.
+
+[x] Telegram AI Bot (Béta) élesítése.
+
+[ ] Közösségi média csatornák indítása (Twitter, Telegram).
+
+FÁZIS 2: NÖVEKEDÉS (2025 Q2)
+
+[ ] Pre-Sale (Előértékesítés) indítása.
+
+[ ] Marketing kampányok (Influencerek, YouTube).
+
+[ ] A Bot fejlesztése: Limit Order és Stop-Loss funkciók automatizálása.
+
+[ ] 1,000 Telegram tag elérése.
+
+FÁZIS 3: TŐZSDE & EXPANZIÓ (2025 Q3)
+
+[ ] Listázás a PancakeSwap-on (DEX Launch).
+
+[ ] Likviditás zárolása (Liquidity Lock) a biztonságért.
+
+[ ] CoinGecko és CoinMarketCap listázás.
