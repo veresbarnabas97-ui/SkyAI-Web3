@@ -1,0 +1,20 @@
+📖 3. USER GUIDE (Használati Útmutató)
+Ezt beteheted a Bot "Info" gombja alá, vagy egy "How to Buy" posztba.
+
+HOGYAN KEZDJ HOZZÁ?
+
+1. Lépés: Csatlakozás Indítsd el a hivatalos botot: @SkyAI00bot Itt éred el a főmenüt, a tárca-ellenőrzést és a jelzéseket.
+
+2. Lépés: Token Vásárlás (Pre-Sale) A $SKY tokenek jelenleg kedvezményes áron vásárolhatók meg.
+
+Web3 mód: Nyisd meg a Botban az "App Nyitása" gombot, és csatlakoztasd a TrustWallet/MetaMask tárcádat.
+
+Készpénz/Kártya: A Bot "Befizetés" menüjében találsz Binance Pay és Revolut opciókat. Utalás után az adminisztrátor manuálisan küldi a tokeneket a tárcádba.
+
+3. Lépés: VIP Jelzések A token birtokosai (vagy VIP előfizetők) automatikusan bekerülnek a zárt @SkyAI_VIP_Pro csatornába.
+
+A Bot a nap 24 órájában figyeli a piacot (BTC, BNB, SOL).
+
+Csak akkor küld értesítést, ha a mesterséges intelligencia erős trendet (SMA kereszteződést) észlel.
+
+Nincs felesleges spam, csak minőségi szignálok.
