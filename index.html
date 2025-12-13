@@ -343,30 +343,26 @@
             try {
                 // --- BSC (TrustWallet / MetaMask) ---
                 if (chain === 'BSC') {
-                    // Ha nincs MetaMask (pl. sima mobil Chrome-ban vagyunk)
-                    if (!window.ethereum) {
-                        // Ha mobilon van, nyissuk meg az appot automatikusan
-                        if(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-                            alert("Átirányítás a MetaMask Appba...");
-                            // Ez a "mágikus link" nyitja meg az appot
-                            window.location.href = "https://metamask.app.link/dapp/" + window.location.href.replace("https://", "");
-                            return;
-                        }
-                        // Ha PC-n van, de nincs bővítmény
-                        window.open("https://metamask.io/download/", "_blank");
-                        throw "A böngésződ nem látja a MetaMaskot! Kérlek telepítsd a bővítményt, vagy használd a MetaMask beépített böngészőjét.";
+                    // Ha mobilon vagyunk és nincs beépített Web3 (pl. sima Chrome)
+                    if (!window.ethereum && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                         // Átirányítás a MetaMask appba (Deep Link)
+                         const currentUrl = window.location.href.replace("https://", "");
+                         window.location.href = "https://metamask.app.link/dapp/" + currentUrl;
+                         return;
                     }
                     
+                    // Ha PC-n vagyunk és nincs bővítmény
+                    if (!window.ethereum) {
+                        window.open("https://metamask.io/download/", "_blank");
+                        throw "A böngésződ nem látja a MetaMaskot! Telepítsd a bővítményt.";
+                    }
+
+                    // Normál csatlakozás
                     provider = new ethers.providers.Web3Provider(window.ethereum);
-                    // ... innen megy tovább a régi kód ...
                     await provider.send("eth_requestAccounts", []);
-                    // ...
                     
-                    provider = new ethers.providers.Web3Provider(window.ethereum);
-                    await provider.send("eth_requestAccounts", []);
+                    // Hálózat váltás BSC-re (56)
                     const network = await provider.getNetwork();
-                    
-                    // Automatikus hálózatváltás BSC-re (ChainID: 56)
                     if(network.chainId !== 56) {
                         try {
                             await window.ethereum.request({
@@ -383,27 +379,33 @@
                 
                 // --- SOLANA (Phantom) ---
                 else if (chain === 'SOL') {
-                    if (!window.solana || !window.solana.isPhantom) {
-                        if(/Android|iPhone/i.test(navigator.userAgent)) {
-                            window.location.href = "https://phantom.app/ul/browse/" + encodeURIComponent(window.location.href);
-                            return;
-                        }
-                        throw "Phantom Wallet nincs telepítve!";
+                    // Ha mobilon vagyunk és nincs Phantom (sima Chrome)
+                    if ((!window.solana || !window.solana.isPhantom) && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                        // Átirányítás a Phantom appba
+                        const url = encodeURIComponent(window.location.href);
+                        window.location.href = "https://phantom.app/ul/browse/" + url;
+                        return;
                     }
+
+                    if (!window.solana || !window.solana.isPhantom) throw "Phantom Wallet nincs telepítve!";
+                    
                     const resp = await window.solana.connect();
                     userAddress = resp.publicKey.toString();
                     currentChain = 'SOL';
                 }
                 
-                // UI Update
+                // SIKERES CSATLAKOZÁS - UI FRISSÍTÉS
                 btn.innerHTML = `<i class="fas fa-check-circle"></i> ${userAddress.slice(0,4)}...${userAddress.slice(-4)}`;
                 btn.style.borderColor = "var(--success)";
                 btn.style.color = "var(--success)";
-                alert(`Sikeres csatlakozás: ${chain}`);
+                // alert(`Sikeres csatlakozás: ${chain}`); // Opcionális
 
             } catch (err) {
                 console.error(err);
-                alert("Hiba: " + err);
+                // Mobilon ne dobjunk alertet ha csak átirányítunk, de hiba esetén igen
+                if(!err.toString().includes("Deep Link")) {
+                     alert("Hiba: " + err);
+                }
                 btn.innerHTML = '<i class="fas fa-wallet"></i> CSATLAKOZTATÁS';
             }
         }
