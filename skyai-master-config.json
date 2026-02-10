@@ -1,0 +1,67 @@
+{
+  "ecosystem": {
+    "name": "SkyAI Empire",
+    "version": "1.0.0",
+    "status": "live",
+    "chainId": 56, 
+    "networkName": "BSC Mainnet" 
+  },
+  "tokens": {
+    "governance": {
+      "name": "SkyAI Governance",
+      "symbol": "SKY-GOV",
+      "address": "0x4B30d92243e88907751E016d33A23D3A1A560026",
+      "decimals": 18,
+      "totalSupply": 100000000,
+      "role": "Core Access & Voting",
+      "utility": ["Web3 Terminal Access", "DAO Voting", "Profit Share"],
+      "allocations": {
+        "locked": "60%",
+        "circulation": "40%"
+      }
+    },
+    "utility": {
+      "name": "SkyAI Fuel",
+      "symbol": "SKY-UTIL",
+      "address": "0xcBbaDC40Cde0F12679a6b0b74fB732E02E60fa83",
+      "decimals": 18,
+      "totalSupply": 97000000,
+      "role": "Ecosystem Fuel & Rewards",
+      "utility": ["Trading Bot Fees", "Staking Rewards", "Liquidity Incentives"],
+      "burnMechanism": "Active"
+    }
+  },
+  "contracts": {
+    "presale": "0x...", 
+    "stakingPool": "0x...",
+    "router": "0x10ED43C718714eb63d5aA57B78B54704E256024E"
+  },
+  "platforms": {
+    "empire": {
+      "url": "https://empire.skyai.io",
+      "repo": "skyai-empire",
+      "description": "The Central Hub"
+    },
+    "trading": {
+      "url": "https://trade.skyai.io",
+      "repo": "skyai-trading-ecosystem",
+      "requiredToken": "utility"
+    },
+    "terminal": {
+      "url": "https://terminal.skyai.io",
+      "repo": "skyai-web3-terminal",
+      "requiredToken": "governance",
+      "minBalanceForAccess": 1000
+    },
+    "founder": {
+      "url": "https://founder.skyai.io",
+      "repo": "skyai-founder-profile",
+      "contact": "founder@skyai.io"
+    }
+  },
+  "socials": {
+    "telegram": "https://t.me/skyai_official",
+    "twitter": "https://x.com/skyai",
+    "github": "https://github.com/SkyAI-Ecosystem"
+  }
+}
